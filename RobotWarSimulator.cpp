@@ -121,7 +121,7 @@ public:
     void fire(int targetX, int targetY, Roguelike& game) override {
         game.genericFire(this, targetX, targetY, 1); // Implements basic firing
     }
-    void move(char input, Roguelike& game) override; // Implements basic movemen
+    void move(char input, Roguelike& game) override; // Implements basic movement
     std::string getType() const override { return "GenericRobot"; } // Returns robot type
     Robot& operator+(const std::pair<int, int>& delta) override {
         x += delta.first;
@@ -172,7 +172,18 @@ public:
         : Robot(x_, y_, name_, symbol) {
         scoutCount = 3;
     }
-    void specialAction(Roguelike& game) override;
+    void specialAction(Roguelike& game) override {
+        // Implements scouting action to show all other bots' locations, unique to ScoutBot via inheritance
+        if (scoutCount <= 0) {
+            std::cout << name << " has no scouts left!\n";
+            return;
+        }
+        scoutCount--;
+        std::cout << "Scouting entire battlefield (Scouts left: " << scoutCount << "):\n";
+        game.scoutFor(this); // Delegate scouting to Roguelike's method
+        std::cout << "\nPausing for 10 seconds to review the scout results...\n";
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+    }
     void fire(int targetX, int targetY, Roguelike& game) override {
         game.genericFire(this, targetX, targetY, 1);
     }
@@ -362,9 +373,12 @@ void Roguelike::look(Robot* robot) {
 
 void Roguelike::scoutFor(Robot* scout) {
     // Scouts for all other robots' positions, using polymorphism for robot state
+    bool first = true;
     for (size_t i = 0; i < robots.size(); ++i) {
         if (static_cast<int>(i) != currentTurn && robots[i]->isAlive()) {
-            std::cout << robots[i]->getName() << " at (" << robots[i]->getX() << ", " << robots[i]->getY() << ")\n";
+            if (!first) std::cout << " ";
+            std::cout << robots[i]->getName() << " (" << robots[i]->getX() << ", " << robots[i]->getY() << ")";
+            first = false;
         }
     }
 }
@@ -497,7 +511,7 @@ Roguelike::Roguelike() : currentTurn(0), hasLooked(false), hasFired(false), step
     const std::string robot4Symbol[4] = {"\033[33m^\033[0m", "\033[33m>\033[0m", "\033[33mv\033[0m", "\033[33m<\033[0m"};
     const std::string robot5Symbol[4] = {"\033[35m^\033[0m", "\033[35m>\033[0m", "\033[35mv\033[0m", "\033[35m<\033[0m"};
     const std::string robot6Symbol[4] = {"\033[36m^\033[0m", "\033[36m>\033[0m", "\033[36mv\033[0m", "\033[36m<\033[0m"};
-    robots.push_back(new GenericRobot(0, 0, "robot1 (red)", robot1Symbol));
+    robots.push_back(new ScoutBot(0, 0, "robot1 (red)", robot1Symbol));
     robots.push_back(new GenericRobot(0, 0, "robot2 (blue)", robot2Symbol));
     robots.push_back(new GenericRobot(0, 0, "robot3 (green)", robot3Symbol));
     robots.push_back(new GenericRobot(0, 0, "robot4 (yellow)", robot4Symbol));
@@ -763,17 +777,6 @@ void LongShotBot::move(char input, Roguelike& game) {
         case 'C': newX -= dxForward - dxLeft; newY -= dyForward - dyLeft; break;
     }
     game.moveRobot(this, newX, newY);
-}
-
-void ScoutBot::specialAction(Roguelike& game) {
-    // Implements scouting action, unique to ScoutBot via inheritance
-    if (scoutCount <= 0) {
-        std::cout << name << " has no scouts left!\n";
-        return;
-    }
-    scoutCount--;
-    std::cout << "Scouting entire battlefield (Scouts left: " << scoutCount << "):\n";
-    game.scoutFor(this);
 }
 
 void ScoutBot::move(char input, Roguelike& game) {
