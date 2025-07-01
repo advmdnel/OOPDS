@@ -33,48 +33,49 @@ class Robot;
 
 class Roguelike {
 private:
-    std::vector<Robot*> robots;
-    std::vector<std::vector<std::string>> map;
-    int currentTurn;
-    bool hasLooked, hasFired;
-    int step;
-    int robotCount;
+    std::vector<Robot*> robots; // Vector to store pointers to Robot objects, enabling polymorphism
+    std::vector<std::vector<std::string>> map; // 2D vector representing the game map
+    int currentTurn; // Tracks whose turn it is
+    bool hasLooked, hasFired; // Flags to limit actions per turn
+    int step; // Tracks the game step count
+    int robotCount; // Tracks the number of active robots
 
     void initializeMap() { map.assign(MAP_HEIGHT, std::vector<std::string>(MAP_WIDTH, FLOOR)); }
+    // Initializes the map with floor tiles, setting up the game environment
 
-    void placeRobot(Robot* robot);
-    void respawnRobot(Robot* robot);
-    void respawnAll();
-    void checkSelfDestruct(Robot* robot);
-
-public:
-    bool isOccupied(int x, int y) const;
-    void genericFire(Robot* shooter, int targetX, int targetY, int range);
-    void look(Robot* robot);
-    void scoutFor(Robot* scout);
-    void moveRobot(Robot* robot, int newX, int newY, bool isJump = false);
-    void offerUpgrade(Robot* robot);
-    void logMove(const std::string& action, int fromX, int fromY, int toX, int toY, const std::string& additionalLog = "");
-    std::string dirToString(Direction dir);
-    void advanceTurn();
-
-    bool getFireTarget(int robotX, int robotY, int dxForward, int dxLeft, int dyForward, int dyLeft, int& targetX, int& targetY);
+    void placeRobot(Robot* robot); // Places a robot on the map at a random valid position
+    void respawnRobot(Robot* robot); // Respawns a robot if it loses all lives
+    void respawnAll(); // Respawns all robots currently alive
+    void checkSelfDestruct(Robot* robot); // Checks if a robot self-destructs due to no shells
 
 public:
-    Roguelike();
-    ~Roguelike();
-    void display();
-    void moveRobot(char input);
-    bool isGameOver() const;
-    std::string getWinner() const;
+    bool isOccupied(int x, int y) const; // Checks if a map position is occupied by a robot
+    void genericFire(Robot* shooter, int targetX, int targetY, int range); // Handles firing logic for any robot
+    void look(Robot* robot); // Allows a robot to look at surrounding positions
+    void scoutFor(Robot* scout); // Scouts for other robots' positions
+    void moveRobot(Robot* robot, int newX, int newY, bool isJump = false); // Moves a robot to a new position
+    void offerUpgrade(Robot* robot); // Offers an upgrade to a robot after a successful hit
+    void logMove(const std::string& action, int fromX, int fromY, int toX, int toY, const std::string& additionalLog = ""); // Logs game actions
+    std::string dirToString(Direction dir); // Converts Direction enum to string
+    void advanceTurn(); // Advances to the next robot's turn
+
+    bool getFireTarget(int robotX, int robotY, int dxForward, int dxLeft, int dyForward, int dyLeft, int& targetX, int& targetY); // Gets target coordinates for firing
+
+public:
+    Roguelike(); // Constructor to initialize the game
+    ~Roguelike(); // Destructor to clean up dynamically allocated robots
+    void display(); // Displays the current game state
+    void moveRobot(char input); // Processes player input for movement and actions
+    bool isGameOver() const; // Checks if the game is over
+    std::string getWinner() const; // Determines the winner
 };
 
 // Robot class and subclasses
 class Robot {
 protected:
-    int x, y, lives, shells, jumpCount, scoutCount;
-    Direction dir;
-    std::string name;
+    int x, y, lives, shells, jumpCount, scoutCount; // Protected members for inheritance
+    Direction dir; // Current direction of the robot
+    std::string name; // Name of the robot
     std::string symbols[4]; // Symbols for each direction (colored)
 
 public:
@@ -82,9 +83,9 @@ public:
         : x(x_), y(y_), lives(3), shells(10), jumpCount(0), scoutCount(0), dir(NORTH), name(name_) {
         for (int i = 0; i < 4; ++i) symbols[i] = symbol[i];
     }
-    virtual ~Robot() = default;
+    virtual ~Robot() = default; // Virtual destructor for proper cleanup in inheritance
 
-    // Getters
+    // Getters for encapsulations
     int getX() const { return x; }
     int getY() const { return y; }
     int getLives() const { return lives; }
@@ -94,20 +95,20 @@ public:
     std::string getName() const { return name; }
     bool isAlive() const { return lives > 0; }
 
-    // Setters
+    // Setters for encapsulation
     void setPosition(int x_, int y_) { x = x_; y = y_; }
     void setDir(Direction d) { dir = d; }
     void reduceLives() { lives--; }
     void reduceShells() { shells--; }
     void setLives(int l) { lives = l; }
 
-    // Pure virtual functions
+    // Pure virtual functions for polymorphism
     virtual void specialAction(Roguelike& game) = 0;
     virtual void fire(int targetX, int targetY, Roguelike& game) = 0;
     virtual void move(char input, Roguelike& game) = 0;
     virtual std::string getType() const = 0;
 
-    // Operator overloading
+    // Operator overloading for polymorphism
     virtual Robot& operator+(const std::pair<int, int>& delta) = 0;
     friend std::ostream& operator<<(std::ostream& os, const Robot& robot);
 };
@@ -116,17 +117,17 @@ class GenericRobot : public Robot {
 public:
     GenericRobot(int x_, int y_, const std::string& name_, const std::string symbol[4])
         : Robot(x_, y_, name_, symbol) {}
-    void specialAction(Roguelike& game) override {}
+    void specialAction(Roguelike& game) override {} // Empty implementation as no special action
     void fire(int targetX, int targetY, Roguelike& game) override {
-        game.genericFire(this, targetX, targetY, 1);
+        game.genericFire(this, targetX, targetY, 1); // Implements basic firing
     }
-    void move(char input, Roguelike& game) override;
-    std::string getType() const override { return "GenericRobot"; }
+    void move(char input, Roguelike& game) override; // Implements basic movemen
+    std::string getType() const override { return "GenericRobot"; } // Returns robot type
     Robot& operator+(const std::pair<int, int>& delta) override {
         x += delta.first;
         y += delta.second;
         return *this;
-    }
+    } // Overrides operator for position update
 };
 
 class JumpBot : public Robot {
@@ -186,6 +187,7 @@ public:
 
 // Implementations of Roguelike methods
 void Roguelike::placeRobot(Robot* robot) {
+    // Places a robot at a random valid position on the map, using a loop to avoid occupied spaces
     int x, y, attempts = 0, maxAttempts = 100;
     do {
         x = std::rand() % MAP_WIDTH;
@@ -198,7 +200,7 @@ void Roguelike::placeRobot(Robot* robot) {
     map[y][x] = robot->getSymbol();
 }
 
-void Roguelike::respawnRobot(Robot* robot) {
+void Roguelike::respawnRobot(Robot* robot) { // Respawns a robot if it loses all lives, updates map and logs the action
     if (!robot->isAlive()) {
         map[robot->getY()][robot->getX()] = FLOOR;
         std::cout << robot->getName() << " has been eliminated!\n";
@@ -212,6 +214,7 @@ void Roguelike::respawnRobot(Robot* robot) {
 }
 
 void Roguelike::respawnAll() {
+    // Respawns all alive robots to new positions
     for (auto& robot : robots) {
         if (robot->isAlive()) {
             map[robot->getY()][robot->getX()] = FLOOR;
@@ -221,6 +224,7 @@ void Roguelike::respawnAll() {
 }
 
 void Roguelike::checkSelfDestruct(Robot* robot) {
+    // Checks if a robot should self-destruct due to no shells, updates map and logs
     if (robot->getShells() <= 0) {
         map[robot->getY()][robot->getX()] = FLOOR;
         robot->setLives(0);
@@ -229,6 +233,7 @@ void Roguelike::checkSelfDestruct(Robot* robot) {
 }
 
 bool Roguelike::isOccupied(int x, int y) const {
+    // Checks if a given position is occupied by any alive robot, using a loop over robots
     for (const auto& robot : robots) {
         if (robot->isAlive() && robot->getX() == x && robot->getY() == y) return true;
     }
@@ -236,6 +241,7 @@ bool Roguelike::isOccupied(int x, int y) const {
 }
 
 void Roguelike::genericFire(Robot* shooter, int targetX, int targetY, int range) {
+    // Handles firing logic for any robot, using polymorphism to call through shooter pointer
     int robotX = shooter->getX(), robotY = shooter->getY();
     std::string fireLog;
 
@@ -310,6 +316,7 @@ void Roguelike::genericFire(Robot* shooter, int targetX, int targetY, int range)
 }
 
 void Roguelike::look(Robot* robot) {
+    // Allows a robot to look at surrounding positions, using polymorphism for robot state
     int robotX = robot->getX(), robotY = robot->getY();
     std::string lookLog;
 
@@ -354,6 +361,7 @@ void Roguelike::look(Robot* robot) {
 }
 
 void Roguelike::scoutFor(Robot* scout) {
+    // Scouts for all other robots' positions, using polymorphism for robot state
     for (size_t i = 0; i < robots.size(); ++i) {
         if (static_cast<int>(i) != currentTurn && robots[i]->isAlive()) {
             std::cout << robots[i]->getName() << " at (" << robots[i]->getX() << ", " << robots[i]->getY() << ")\n";
@@ -362,6 +370,7 @@ void Roguelike::scoutFor(Robot* scout) {
 }
 
 void Roguelike::moveRobot(Robot* robot, int newX, int newY, bool isJump) {
+    // Moves a robot to a new position, handling boundaries and collisions
     if (newX < 0 || newX >= MAP_WIDTH || newY < 0 || newY >= MAP_HEIGHT) {
         std::cout << "Out of bounds!\n";
         return;
@@ -383,6 +392,7 @@ void Roguelike::moveRobot(Robot* robot, int newX, int newY, bool isJump) {
 }
 
 void Roguelike::offerUpgrade(Robot* robot) {
+    // Offers a random upgrade to a robot after a successful hit, using inheritance for new robot types
     int choice = (std::rand() % 3) + 1;
     int x = robot->getX(), y = robot->getY();
     std::string name = robot->getName();
@@ -405,6 +415,7 @@ void Roguelike::offerUpgrade(Robot* robot) {
 }
 
 void Roguelike::logMove(const std::string& action, int fromX, int fromY, int toX, int toY, const std::string& additionalLog) {
+    // Logs game actions to a file, iterating over robots for state
     std::ofstream logFile("game_log.txt", std::ios::app);
     if (logFile.is_open()) {
         logFile << "Step: " << step << "\n";
@@ -428,10 +439,12 @@ void Roguelike::logMove(const std::string& action, int fromX, int fromY, int toX
 }
 
 std::string Roguelike::dirToString(Direction dir) {
+    // Converts Direction enum to a string for display
     return dir == NORTH ? "North" : dir == EAST ? "East" : dir == SOUTH ? "South" : "West";
 }
 
 void Roguelike::advanceTurn() {
+    // Advances to the next robot's turn, handling wrap-around
     int initialTurn = currentTurn;
     do {
         currentTurn = (currentTurn + 1) % robots.size();
@@ -441,6 +454,7 @@ void Roguelike::advanceTurn() {
 }
 
 bool Roguelike::getFireTarget(int robotX, int robotY, int dxForward, int dxLeft, int dyForward, int dyLeft, int& targetX, int& targetY) {
+    // Gets target coordinates based on user input for firing
     std::cout << "Enter Location (AQWESDZC): ";
     std::string targetInput;
     std::getline(std::cin, targetInput);
@@ -473,6 +487,7 @@ bool Roguelike::getFireTarget(int robotX, int robotY, int dxForward, int dxLeft,
 }
 
 Roguelike::Roguelike() : currentTurn(0), hasLooked(false), hasFired(false), step(0), robotCount(3) {
+    // Initializes the game, setting up map and creating initial robots with inheritance
     std::ofstream logFile("game_log.txt", std::ios::trunc);
     if (logFile.is_open()) logFile.close();
     initializeMap();
@@ -494,10 +509,12 @@ Roguelike::Roguelike() : currentTurn(0), hasLooked(false), hasFired(false), step
 }
 
 Roguelike::~Roguelike() {
+    // Cleans up dynamically allocated robot objects using polymorphism
     for (auto robot : robots) delete robot;
 }
 
 void Roguelike::display() {
+    // Displays the current game state, using polymorphism to access robot properties
     system("cls");
     std::vector<std::vector<std::string>> displayMap(MAP_HEIGHT, std::vector<std::string>(MAP_WIDTH, FLOOR));
     if (robots[currentTurn]->isAlive()) {
@@ -531,6 +548,7 @@ void Roguelike::display() {
 }
 
 void Roguelike::moveRobot(char input) {
+    // Processes player input, using polymorphism to call robot-specific actions
     step++;
     Robot* currentRobot = robots[currentTurn];
     std::string inputStr;
@@ -632,6 +650,7 @@ void Roguelike::moveRobot(char input) {
 }
 
 bool Roguelike::isGameOver() const {
+    // Checks if the game is over by counting alive robots
     int aliveCount = 0;
     for (const auto& robot : robots) {
         if (robot->isAlive()) aliveCount++;
@@ -640,6 +659,7 @@ bool Roguelike::isGameOver() const {
 }
 
 std::string Roguelike::getWinner() const {
+    // Determines the winner by finding the last alive robot
     for (const auto& robot : robots) {
         if (robot->isAlive()) return robot->getName();
     }
@@ -647,6 +667,7 @@ std::string Roguelike::getWinner() const {
 }
 
 void GenericRobot::move(char input, Roguelike& game) {
+    // Implements basic movement logic, using inheritance from Robot
     int newX = x, newY = y;
     int dxForward = 0, dyForward = 0, dxLeft = 0, dyLeft = 0;
     switch (dir) {
@@ -672,6 +693,7 @@ void GenericRobot::move(char input, Roguelike& game) {
 }
 
 void JumpBot::specialAction(Roguelike& game) {
+    // Implements jumping action, unique to JumpBot via inheritance
     if (jumpCount <= 0) {
         std::cout << name << " has no jumps left!\n";
         return;
@@ -692,6 +714,7 @@ void JumpBot::specialAction(Roguelike& game) {
 }
 
 void JumpBot::move(char input, Roguelike& game) {
+    // Implements basic movement for JumpBot, inheriting from Robot
     int newX = x, newY = y;
     int dxForward = 0, dyForward = 0, dxLeft = 0, dyLeft = 0;
     switch (dir) {
@@ -717,6 +740,7 @@ void JumpBot::move(char input, Roguelike& game) {
 }
 
 void LongShotBot::move(char input, Roguelike& game) {
+    // Implements basic movement for LongShotBot, inheriting from Robot
     int newX = x, newY = y;
     int dxForward = 0, dyForward = 0, dxLeft = 0, dyLeft = 0;
     switch (dir) {
@@ -742,6 +766,7 @@ void LongShotBot::move(char input, Roguelike& game) {
 }
 
 void ScoutBot::specialAction(Roguelike& game) {
+    // Implements scouting action, unique to ScoutBot via inheritance
     if (scoutCount <= 0) {
         std::cout << name << " has no scouts left!\n";
         return;
@@ -752,6 +777,7 @@ void ScoutBot::specialAction(Roguelike& game) {
 }
 
 void ScoutBot::move(char input, Roguelike& game) {
+    // Implements basic movement for ScoutBot, inheriting from Robot
     int newX = x, newY = y;
     int dxForward = 0, dyForward = 0, dxLeft = 0, dyLeft = 0;
     switch (dir) {
@@ -777,6 +803,7 @@ void ScoutBot::move(char input, Roguelike& game) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Robot& robot) {
+    // Overloads << operator to display robot details, using polymorphism
     os << robot.name << " (" << robot.getType() << ") at (" << robot.x << ", " << robot.y << "), "
        << "Lives: " << robot.lives << ", Shells: " << robot.shells;
     if (robot.getType() == "JumpBot") os << ", Jumps: " << robot.jumpCount;
@@ -785,6 +812,7 @@ std::ostream& operator<<(std::ostream& os, const Robot& robot) {
 }
 
 int main() {
+    // Main game loop, managing the game state until over
     Roguelike game;
     char input;
     while (!game.isGameOver()) {
